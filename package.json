@@ -1,8 +1,10 @@
 {
   "name": "greasy-hosts",
   "version": "1.0.0",
+  "scripts": {
+    "postinstall": "node ./install.js"
+  },
   "dependencies": {
-    "chrome-native-messaging": "^0.2.0",
     "filewatcher": "^3.0.1"
   }
 }
