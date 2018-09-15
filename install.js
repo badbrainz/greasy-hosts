@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const util = require('util')
 const readline = require('readline')
+const child_process = require('child_process')
 const writeFile = util.promisify(fs.writeFile)
 
 const args = {
@@ -138,7 +139,7 @@ async function install(target, whitelist, key) {
 
     if (process.platform == 'win32') {
       await new Promise(function(res, rej) {
-        const reg = spawn('REG', ['ADD', key, '/t', 'REG_SZ', '/d', json, '/f'])
+        const reg = child_process.spawn('REG', ['ADD', key, '/t', 'REG_SZ', '/d', json, '/f'])
         reg.on('close', e => e ? rej(e) : res())
       })
     }
