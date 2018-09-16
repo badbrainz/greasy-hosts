@@ -131,7 +131,7 @@ new Promise((resolve, reject) => {
 async function install(target, whitelist, key) {
   for (const base of 'read write watch spawn'.split(' ')) {
     const name = HOST.replace('%NAME%', base)
-    const host = isWin ? `${base}.bat` : path.join('bin', `${base}.js`)
+    const host = isWin ? `${base}.bat` : path.resolve('bin', `${base}.js`)
     const json = path.join(target, `${name}.json`)
 
     await writeFile(json, JSON.stringify({
