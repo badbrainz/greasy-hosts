@@ -76,14 +76,14 @@ switch (process.platform) {
 const scripts_dir = path.join(__dirname, 'user_scripts')
 
 const ff_whitelist = {
-  allowed_origins: [
-    'chrome-extension://daihojmdjmhocgfjnhifkpdkdjaikjoj'
+  allowed_extensions: [
+    '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}'
   ]
 }
 
 const cr_whitelist = {
-  allowed_extensions: [
-    '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}'
+  allowed_origins: [
+    'chrome-extension://daihojmdjmhocgfjnhifkpdkdjaikjoj'
   ]
 }
 
