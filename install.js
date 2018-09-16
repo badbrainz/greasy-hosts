@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const os = require('os')
 const fs = require('fs')
 const path = require('path')
 const util = require('util')
@@ -17,18 +18,20 @@ for (const arg of process.argv.slice(2)) {
 
 const HOST = 'io.greasyhost.%NAME%'
 
+const HOME = os.homedir()
+
 // Firefox system-wide
 const TARGET_FF_LNX_SW = '/usr/lib/mozilla/native-messaging-hosts'
 const TARGET_FF_OSX_SW = '/Library/Application Support/Mozilla/NativeMessagingHosts'
 // Firefox user-specific
-const TARGET_FF_LNX = path.join(process.env.HOME, '.mozilla/native-messaging-hosts')
-const TARGET_FF_OSX = path.join(process.env.HOME, 'Library/Application Support/Mozilla/NativeMessagingHosts/')
+const TARGET_FF_LNX = path.join(HOME, '.mozilla/native-messaging-hosts')
+const TARGET_FF_OSX = path.join(HOME, 'Library/Application Support/Mozilla/NativeMessagingHosts/')
 // Chrome system-wide
 const TARGET_CR_LNX_SW = '/etc/opt/chrome/native-messaging-hosts'
 const TARGET_CR_OSX_SW = '/Library/Google/Chrome/NativeMessagingHosts'
 // Chrome user-specific
-const TARGET_CR_LNX = path.join(process.env.HOME, '.config/google-chrome/NativeMessagingHosts')
-const TARGET_CR_OSX = path.join(process.env.HOME, 'Library/Application Support/Google/Chrome/NativeMessagingHosts')
+const TARGET_CR_LNX = path.join(HOME, '.config/google-chrome/NativeMessagingHosts')
+const TARGET_CR_OSX = path.join(HOME, 'Library/Application Support/Google/Chrome/NativeMessagingHosts')
 
 const WIN_REG_FF_LM = 'HKLM\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\'
 const WIN_REG_FF_CU = 'HKCU\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\'
