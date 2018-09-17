@@ -2,7 +2,7 @@ greasy-hosts
 ============
 External editor integration for [Greasemonkey](https://github.com/greasemonkey/greasemonkey)
 
-Example usage [badbrainz/greasemonkey@ee64317](https://github.com/badbrainz/greasemonkey/commit/ee64317501b5f639c4a66b698373b794441e3739)
+Example usage [badbrainz/greasemonkey/commits/open-external](https://github.com/badbrainz/greasemonkey/commits/open-external)
 
 Requirements
 ------------
