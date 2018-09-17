@@ -21,17 +21,17 @@ function onChange(file, stat) {
   })
 }
 
-pipeline(stdin, Input(), Parse(), debug).on('data', onInput)
-function onInput(chunk) {
+pipeline(stdin, Input(), Parse(), debug)
+  .on('data', data => onInput(data).catch(onError))
+
+async function onInput(chunk) {
   const file = path.join(scripts_dir, chunk.file)
-  fs.stat(file, function(error) {
-    if (error) {
-      debug(error)
-      response.write({ error })
-    } else {
-      watcher[chunk.unwatch ? 'remove' : 'add'](file)
-    }
-  })
+  watcher[chunk.unwatch ? 'remove' : 'add'](file)
+}
+
+function onError(error) {
+  debug(error)
+  response.write({ error })
 }
 
 function debug(error) {
