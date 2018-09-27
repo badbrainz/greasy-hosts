@@ -1,44 +1,36 @@
 #!/usr/bin/env node
 
 const path = require('path')
+const util = require('util')
 const { createReadStream } = require('fs')
 const { pipeline, finished, Transform } = require('stream')
 const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
+const finish = util.promisify(finished)
 
-const response = Stringify()
-pipeline(response, Output(), debug).pipe(stdout)
-
-const transform = {
+const transform = Transform({
   objectMode: true,
   transform(chunk, enc, cb) {
-    this.push({ text: chunk.toString() })
-    cb()
-  },
-  flush(cb) {
-    this.push({ text: null })
-    cb()
+    readFile(chunk.toString().trim())
+      .catch(e => this.push({ error: e.toString() }))
+      .finally(cb)
   }
+})
+
+async function readFile(filename) {
+  const file = path.join(scripts_dir, filename)
+  for await (const chunk of createReadStream(file)) {
+    if (transform.push({ text: chunk.toString() }) === false) {
+      await new Promise((resolve) => {
+        transform.on('drain', resolve)
+      })
+    }
+  }
+  transform.push({ text: null })
 }
 
-const parser = pipeline(stdin, Input(), Parse(), debug)
-parser.once('readable', doRead)
-function doRead() {
-  const chunk = parser.read()
-  if (chunk === null)
-    return parser.once('readable', doRead)
-  const file = createReadStream(path.join(scripts_dir, chunk))
-  finished(file, onFinished)
-  pipeline(file, Transform(transform), debug).pipe(response, { end: false })
-}
-
-function onFinished(err) {
-  response.write({ error: err })
-  doRead()
-}
-
-function debug(error) {
-  stderr.write(`${error || 'stream ended.'}\n`)
-}
+pipeline(stdin, Input(), Parse(), transform, Stringify(), Output(),
+  e => stderr.write(`${e || 'end of stream'}`))
+  .pipe(stdout)

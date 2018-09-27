@@ -1,51 +1,48 @@
 #!/usr/bin/env node
 
 const path = require('path')
+const util = require('util')
 const { createWriteStream } = require('fs')
 const { pipeline, finished, Transform } = require('stream')
 const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
+const finish = util.promisify(finished)
+const file = {}
 
-const response = Stringify()
-pipeline(response, Output(), debug).pipe(stdout)
+const transformer = Transform({
+  objectMode: true,
+  transform(chunk, enc, cb) {
+    writeToFile(chunk)
+      .then(() => this.push({ error: null }))
+      .catch(e => this.push({ error: e.toString() }))
+      .finally(cb)
+  }
+})
 
-const parser = pipeline(stdin, Input(), Parse(), debug)
-parser.once('readable', doRead)
-function doRead() {
-  let ok = true
-  do {
-    const chunk = parser.read()
-    ok = chunk !== null
-    if (ok) {
-      if (parser.file == null) {
-        parser.file = createWriteStream(path.join(scripts_dir, chunk))
-        finished(parser.file, onFinished)
-      } else {
-        const text = chunk.text
-        if (text == null) {
-          parser.file.end()
-          parser.file = null
-        } else {
-          const ret = parser.file.write(text)
-          if (!ret) {
-            ok = false
-            parser.file.once('drain', doRead)
-          }
-        }
-      }
-    } else {
-      parser.once('readable', doRead)
+async function writeToFile(chunk) {
+  if (!file.stream) {
+    file.stream = createWriteStream(path.join(scripts_dir, chunk.toString()))
+    file.eof = finish(file.stream)
+    file.eof.finally(() => {
+      file.stream = null
+      file.eof = null
+    })
+  }
+  else if (chunk.text != null) {
+    if (file.stream.write(chunk.text) === false) {
+      await new Promise((resolve) => {
+        file.stream.once('drain', resolve)
+      })
     }
-  } while (ok)
+  }
+  else {
+    file.stream.end()
+    await file.eof.finally()
+  }
 }
 
-function onFinished(err) {
-  debug(err)
-  response.write({ error: err })
-}
-
-function debug(error) {
-  stderr.write(`${error || 'stream ended.'}\n`)
-}
+pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
+  e => stderr.write(`${e || 'end of stream'}`))
+  .pipe(stdout)

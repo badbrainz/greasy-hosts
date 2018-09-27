@@ -1,39 +1,47 @@
 #!/usr/bin/env node
 
+// BUG fileWatcher doesn't error check existing watchers properly
+
 const fs = require('fs')
 const path = require('path')
+const util = require('util')
 const fileWatcher = require('filewatcher')
-const { pipeline } = require('stream')
+const { pipeline, Transform } = require('stream')
 const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
-
-const response = Stringify()
-pipeline(response, Output(), debug).pipe(stdout)
-
+const readdir = util.promisify(fs.readdir)
 const watcher = fileWatcher()
-watcher.on('change', onChange)
-function onChange(file, stat) {
-  response.write({
-    file: path.parse(file).base,
+
+const transformer = Transform({
+  objectMode: true,
+  transform(chunk, enc, cb) {
+    Promise.resolve(chunk.toString().split('\n'))
+      .then(watchFiles)
+      .catch(e => this.push({ error: e.toString() }))
+      .finally(cb)
+  }
+})
+
+function watchFiles(files) {
+  files.map(f => f.trim())
+    .filter(f => f)
+    .map(f => path.join(scripts_dir, f))
+    .forEach(f => watcher.add(f))
+}
+
+watcher.on('change', function(file, stat) {
+  transformer.emit('data', {
+    file: path.basename(file),
     deleted: !!stat.deleted
   })
-}
+})
 
-pipeline(stdin, Input(), Parse(), debug)
-  .on('data', data => onInput(data).catch(onError))
+readdir(scripts_dir)
+  .then(watchFiles)
+  .catch(e => stderr.write(`${e}\n`))
 
-async function onInput(chunk) {
-  const file = path.join(scripts_dir, chunk.file)
-  watcher[chunk.unwatch ? 'remove' : 'add'](file)
-}
-
-function onError(error) {
-  debug(error)
-  response.write({ error })
-}
-
-function debug(error) {
-  stderr.write(`${error || 'stream ended.'}\n`)
-}
+pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
+  e => stderr.write(`${e || 'end of stream'}`))
+  .pipe(stdout)

@@ -2,40 +2,37 @@
 
 const fs = require('fs')
 const path = require('path')
-const util = require('util')
 const { spawn } = require('child_process')
-const { pipeline } = require('stream')
+const { pipeline, Transform } = require('stream')
 const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
-const stat = util.promisify(fs.stat)
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
 
-const response = Stringify()
-pipeline(response, Output(), debug).pipe(stdout)
+const transformer = Transform({
+  objectMode: true,
+  transform(chunk, enc, cb) {
+    spawnEditor(chunk)
+      .then(() => this.push({ error: null }))
+      .catch(e => this.push({ error: e.toString() }))
+      .finally(cb)
+  }
+})
 
-pipeline(stdin, Input(), Parse(), debug)
-  .on('data', data => onInput(data).catch(onError))
-
-async function onInput(chunk) {
+async function spawnEditor(chunk) {
   const file = path.join(scripts_dir, chunk.file)
-  await stat(file)
-  const proc = spawn(chunk.cmd, [...chunk.args, file], {
+  const proc = spawn(chunk.cmd, chunk.args.concat(file), {
     detached: true,
     stdio: 'ignore'
   })
   proc.unref()
-  await new Promise((resolve, reject) => {
-    proc.on('error', reject)
-    proc.on('close', resolve)
-  })
+  if (proc.pid === undefined) {
+    await new Promise((resolve, reject) => {
+      proc.on('error', reject)
+    })
+  }
 }
 
-function onError(error) {
-  debug(error)
-  response.write({ error })
-}
-
-function debug(error) {
-  stderr.write(`${error || 'stream ended.'}\n`)
-}
+pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
+  e => stderr.write(`${e || 'end of stream'}`))
+  .pipe(stdout)

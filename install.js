@@ -16,8 +16,9 @@ for (const arg of process.argv.slice(2)) {
   args[key] = val
 }
 
-const HOST = 'io.greasyhost.%NAME%'
+const HOST_NAME = 'io.greasyhost.%NAME%'
 
+const TARGET_HOSTS = 'bin'
 const HOME = os.homedir()
 
 const isWin = process.platform == 'win32'
@@ -64,7 +65,7 @@ switch (process.platform) {
     }
     break;
   case 'win32':
-    TARGET_FF = TARGET_CR = path.join(__dirname, 'bin')
+    TARGET_FF = TARGET_CR = path.join(__dirname, TARGET_HOSTS)
     WIN_REG_FF = args.root ? WIN_REG_FF_LM : WIN_REG_FF_CU
     WIN_REG_CR = args.root ? WIN_REG_CR_LM : WIN_REG_CR_CU
     break;
@@ -77,13 +78,15 @@ const scripts_dir = path.join(__dirname, 'user_scripts')
 
 const ff_whitelist = {
   allowed_extensions: [
-    '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}'
+    '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}',
+    'greasyhost@geckoid.com'
   ]
 }
 
 const cr_whitelist = {
   allowed_origins: [
-    'chrome-extension://daihojmdjmhocgfjnhifkpdkdjaikjoj'
+    'chrome-extension://daihojmdjmhocgfjnhifkpdkdjaikjoj/',
+    'chrome-extension://nkkpnoopilechlikflpmigkplmlhhbmk/'
   ]
 }
 
@@ -129,9 +132,10 @@ new Promise((resolve, reject) => {
 })
 
 async function install(target, whitelist, key) {
+  process.stdout.write(`writing to ${target}...`)
   for (const base of 'read write watch spawn'.split(' ')) {
-    const name = HOST.replace('%NAME%', base)
-    const host = isWin ? `${base}.bat` : path.resolve('bin', `${base}.js`)
+    const name = HOST_NAME.replace('%NAME%', base)
+    const host = isWin ? `${base}.bat` : path.resolve(TARGET_HOSTS, `${base}.js`)
     const json = path.join(target, `${name}.json`)
 
     await writeFile(json, JSON.stringify({
@@ -146,7 +150,7 @@ async function install(target, whitelist, key) {
       continue
 
     const folder = `${key}\\${name}`
-    const bat = path.join('bin', host)
+    const bat = path.join(TARGET_HOSTS, host)
 
     await new Promise(function(res, rej) {
       const reg = child_process.spawn('REG', ['ADD', folder, '/ve', '/d', json, '/f'])
@@ -156,5 +160,5 @@ async function install(target, whitelist, key) {
 
     await writeFile(bat, `@echo off\nnode "%~dp0${base}.js" %*`)
   }
-  console.log('installed')
+  process.stdout.write('done\n')
 }
