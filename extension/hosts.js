@@ -8,7 +8,7 @@ export async function readFile(fileName) {
       if (message.text == null) {
         port.disconnect()
         if (message.error) {
-          return reject(message)
+          return reject(new Error(message.error))
         }
         resolve(incomingChunks)
       } else {
@@ -40,7 +40,7 @@ export async function writeFile(fileName, content, chunkSize = 65536) {
     port.onMessage.addListener(function(message) {
       port.disconnect()
       if (message.error) {
-        return reject(message)
+        return reject(new Error(message.error))
       }
       resolve()
     })
@@ -66,7 +66,7 @@ export async function spawnEditor(fileName, command, args = []) {
     port.onMessage.addListener(function(message) {
       port.disconnect()
       if (message.error) {
-        return reject(message)
+        return reject(new Error(message.error))
       }
       resolve()
     })

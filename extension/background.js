@@ -24,7 +24,7 @@ function onMessageWatcher(message) {
 
 async function handleWatcherMessage(message) {
   if (message.error) {
-    return Promise.reject(message.error);
+    throw new Error(message.error);
   }
 
   const [uuid] = message.file.split('.');
@@ -40,7 +40,9 @@ async function handleWatcherMessage(message) {
 
 chrome.runtime.onMessageExternal.addListener(onMessageExternal);
 function onMessageExternal(message, sender, sendResponse) {
-  handleExtensionMessage(message, sender).then(sendResponse, sendResponse);
+  handleExtensionMessage(message, sender)
+    .catch(e => ({ error: e.toString() }))
+    .then(sendResponse);
   return true;
 }
 
