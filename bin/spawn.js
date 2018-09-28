@@ -26,11 +26,13 @@ async function spawnEditor(chunk) {
     stdio: 'ignore'
   })
   proc.unref()
-  if (proc.pid === undefined) {
-    await new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
+    if (proc.pid === undefined) {
       proc.on('error', reject)
-    })
-  }
+    } else {
+      proc.on('close', resolve)
+    }
+  })
 }
 
 pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
