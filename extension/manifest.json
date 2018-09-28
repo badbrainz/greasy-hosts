@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "GreasyHost",
+  "version": "1.0.1",
+
+  "description": "buuuaaarp!",
+
+  "background": {
+    "page": "background.html"
+  },
+
+  "applications": {
+    "gecko": {
+      "id": "greasyhost@geckoid.com"
+    }
+  },
+
+  "permissions": [
+    "nativeMessaging",
+    "storage"
+  ]
+}
