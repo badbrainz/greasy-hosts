@@ -1,13 +1,17 @@
 import { readFile, writeFile, spawnEditor } from './hosts.js';
+import promisify from './promisify.js';
+
+const sendMessage = promisify(chrome.runtime, 'sendMessage');
+const getStorage = promisify(chrome.storage.local, 'get');
 
 const GREASEMONKEY_ID = '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}';
 
-const watcher = chrome.runtime.connectNative('io.greasyhost.watch');
 const defaultOptions = {
   cmd: 'gedit',
   args: []
 };
 
+let watcher = chrome.runtime.connectNative('io.greasyhost.watch');
 
 watcher.onDisconnect.addListener(function() {
   watcher = null;
@@ -26,14 +30,11 @@ async function handleWatcherMessage(message) {
   const [uuid] = message.file.split('.');
 
   if (message.deleted) {
-    await browser.runtime.sendMessage(GREASEMONKEY_ID,
-      { name: 'delete', uuid });
-    return;
+    await sendMessage(GREASEMONKEY_ID, { name: 'delete', uuid });
+  } else {
+    const content = await readFile(message.file);
+    await sendMessage(GREASEMONKEY_ID, { name: 'save', uuid, content });
   }
-
-  const content = await readFile(message.file);
-  await browser.runtime.sendMessage(GREASEMONKEY_ID,
-    { name: 'save', uuid, content });
 }
 
 
@@ -53,6 +54,6 @@ async function handleExtensionMessage(message, sender) {
 
   watcher.postMessage({ file });
 
-  const userOptions = await browser.storage.local.get(defaultOptions);
+  const userOptions = await getStorage(defaultOptions);
   await spawnEditor(file, userOptions.cmd, userOptions.args);
 }
