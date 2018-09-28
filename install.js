@@ -7,6 +7,7 @@ const util = require('util')
 const readline = require('readline')
 const child_process = require('child_process')
 const writeFile = util.promisify(fs.writeFile)
+const mkdir = util.promisify(fs.mkdir)
 
 const args = {
   root: false
@@ -65,7 +66,8 @@ switch (process.platform) {
     }
     break;
   case 'win32':
-    TARGET_FF = TARGET_CR = path.join(__dirname, TARGET_HOSTS)
+    TARGET_FF = path.join(__dirname, 'bin', 'ff')
+    TARGET_CR = path.join(__dirname, 'bin', 'cr')
     WIN_REG_FF = args.root ? WIN_REG_FF_LM : WIN_REG_FF_CU
     WIN_REG_CR = args.root ? WIN_REG_CR_LM : WIN_REG_CR_CU
     break;
@@ -133,9 +135,10 @@ new Promise((resolve, reject) => {
 
 async function install(target, whitelist, key) {
   process.stdout.write(`writing to ${target}...`)
+  await mkdir(target).catch(e => {})
   for (const base of 'read write watch spawn'.split(' ')) {
     const name = HOST_NAME.replace('%NAME%', base)
-    const host = isWin ? `${base}.bat` : path.resolve(TARGET_HOSTS, `${base}.js`)
+    const host = path.resolve(TARGET_HOSTS, `${base}.${ isWin ? 'bat' : 'js' }`)
     const json = path.join(target, `${name}.json`)
 
     await writeFile(json, JSON.stringify({
@@ -150,15 +153,13 @@ async function install(target, whitelist, key) {
       continue
 
     const folder = `${key}\\${name}`
-    const bat = path.join(TARGET_HOSTS, host)
-
     await new Promise(function(res, rej) {
       const reg = child_process.spawn('REG', ['ADD', folder, '/ve', '/d', json, '/f'])
       reg.on('close', c => c ? rej(new Error(`Error adding registry: ${folder}`)) : res())
       reg.on('error', rej)
     })
 
-    await writeFile(bat, `@echo off\nnode "%~dp0${base}.js" %*`)
+    await writeFile(host, `@echo off\nnode "%~dp0${base}.js" %*`)
   }
   process.stdout.write('done\n')
 }
