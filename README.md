@@ -5,3 +5,9 @@ External editor integration for [Greasemonkey](https://github.com/greasemonkey/g
 Requirements
 ------------
  * Node.js v10.0.0
+
+Install
+-------
+```sh
+node install.js
+```
