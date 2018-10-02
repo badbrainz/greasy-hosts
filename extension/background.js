@@ -11,16 +11,16 @@ const defaultOptions = {
   args: []
 };
 
+
 let watcher = chrome.runtime.connectNative('io.greasyhost.watch');
 
 watcher.onDisconnect.addListener(function() {
   watcher = null;
 });
 
-watcher.onMessage.addListener(onMessageWatcher);
-function onMessageWatcher(message) {
+watcher.onMessage.addListener(function(message) {
   handleWatcherMessage(message).catch(e => console.error('%s', e));
-}
+});
 
 async function handleWatcherMessage(message) {
   if (message.error) {
@@ -53,8 +53,6 @@ async function handleExtensionMessage(message, sender) {
 
   const file = `${message.uuid}.js`;
   await writeFile(file, message.content);
-
-  watcher.postMessage({ file });
 
   const userOptions = await getStorage(defaultOptions);
   await spawnEditor(file, userOptions.cmd, userOptions.args);
