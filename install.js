@@ -97,41 +97,28 @@ const rl = readline.createInterface({
   output: process.stdout
 })
 
-new Promise((resolve, reject) => {
-  rl.question('Install for Firefox? y/n ', (input) => {
-    input = input.trim()
-    if (input == 'y' || !input) {
-      install(TARGET_FF, ff_whitelist, WIN_REG_FF).then(resolve).catch(reject)
-    } else {
-      resolve()
-    }
+function ask(question) {
+  return new Promise(function(resolve) {
+    rl.question(question, function(input) {
+      input = input.trim()
+      resolve(input == 'y' || !input)
+    })
   })
-}).then(() => new Promise((resolve, reject) => {
-  rl.question('Install for Chrome? y/n ', (input) => {
-    input = input.trim()
-    if (input == 'y' || !input) {
-      install(TARGET_CR, cr_whitelist, WIN_REG_CR).then(resolve).catch(reject)
-    } else {
-      resolve()
-    }
-  })
-})).then(() => new Promise((resolve, reject) => {
-  fs.mkdir(scripts_dir, 0744, (err) => {
-    if (err) {
-      if (err.code == 'EEXIST') {
-        resolve()
-      } else {
-        reject(err)
-      }
-    } else {
-      resolve()
-    }
-  })
-})).catch((e) => {
-  console.error('%s', e)
-}).finally(() => {
-  rl.close()
-})
+}
+
+async function main() {
+  if (await ask('Install for Firefox? y/n ')) {
+    await install(TARGET_FF, ff_whitelist, WIN_REG_FF)
+  }
+
+  if (await ask('Install for Chrome? y/n ')) {
+    await install(TARGET_CR, cr_whitelist, WIN_REG_CR)
+  }
+
+  await mkdir(scripts_dir, 0744).catch(e => {})
+}
+
+main().catch((e) => console.error('%s', e)).finally(() => rl.close())
 
 async function install(target, whitelist, key) {
   process.stdout.write(`writing to ${target}...`)
