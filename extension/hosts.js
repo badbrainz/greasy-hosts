@@ -1,8 +1,18 @@
-export async function readFile(fileName) {
-  const port = chrome.runtime.connectNative('io.greasyhost.read')
+const fileOperations = {}
 
-  const chunks = await new Promise(function(resolve, reject) {
-    const incomingChunks = []
+function operation(fileName, fn) {
+  let { [fileName]: current = Promise.resolve() } = fileOperations
+  current = current.finally(() => {}).then(() => new Promise(fn))
+  fileOperations[fileName] = current
+  return current
+}
+
+export function readFile(fileName) {
+  return operation(fileName, read)
+
+  function read(resolve, reject) {
+    const port = chrome.runtime.connectNative('io.greasyhost.read')
+    const chunks = []
 
     port.onMessage.addListener(function(message) {
       if (message.text == null) {
@@ -10,9 +20,9 @@ export async function readFile(fileName) {
         if (message.error) {
           return reject(new Error(message.error))
         }
-        resolve(incomingChunks)
+        resolve(chunks.join(''))
       } else {
-        incomingChunks.push(message.text)
+        chunks.push(message.text)
       }
     })
 
@@ -21,13 +31,11 @@ export async function readFile(fileName) {
     })
 
     port.postMessage(fileName)
-  })
-
-  return chunks.join('')
+  }
 }
 
-export async function writeFile(fileName, content, chunkSize = 65536) {
-  const port = chrome.runtime.connectNative('io.greasyhost.write')
+export function writeFile(fileName, content, chunkSize = 65536) {
+  return operation(fileName, write)
 
   function* chop(text) {
     const blocks = Math.max(1, Math.ceil(text.length / chunkSize))
@@ -36,7 +44,9 @@ export async function writeFile(fileName, content, chunkSize = 65536) {
     }
   }
 
-  await new Promise(function(resolve, reject) {
+  function write(resolve, reject) {
+    const port = chrome.runtime.connectNative('io.greasyhost.write')
+
     port.onMessage.addListener(function(message) {
       port.disconnect()
       if (message.error) {
@@ -56,7 +66,7 @@ export async function writeFile(fileName, content, chunkSize = 65536) {
     }
 
     port.postMessage({ text: null })
-  })
+  }
 }
 
 export async function spawnEditor(fileName, command, args = []) {
