@@ -28,13 +28,8 @@ async function handleWatcherMessage(message) {
   }
 
   const [uuid] = message.file.split('.');
-
-  if (message.deleted) {
-    await sendMessage(GREASEMONKEY_ID, { name: 'delete', uuid });
-  } else {
-    const content = await readFile(message.file);
-    await sendMessage(GREASEMONKEY_ID, { name: 'save', uuid, content });
-  }
+  const content = await readFile(message.file);
+  await sendMessage(GREASEMONKEY_ID, { uuid, content });
 }
 
 
