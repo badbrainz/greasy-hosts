@@ -4,12 +4,12 @@ const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
 const { pipeline, Transform } = require('stream')
-const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
+const { stdin, stdout, stderr } = process
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
 
-const transformer = Transform({
+const transform = Transform({
   objectMode: true,
   transform(chunk, enc, cb) {
     spawnEditor(chunk)
@@ -35,6 +35,6 @@ async function spawnEditor(chunk) {
   })
 }
 
-pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
+pipeline(stdin, Input(), Parse(), transform, Stringify(), Output(),
   e => stderr.write(`${e || 'end of stream'}`))
   .pipe(stdout)

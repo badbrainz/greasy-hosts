@@ -1,4 +1,4 @@
-import { readFile, writeFile, spawnEditor } from './hosts.js';
+import { readFile, writeFile, editFile } from './hosts.js';
 import promisify from './promisify.js';
 
 const sendMessage = promisify(chrome.runtime, 'sendMessage');
@@ -50,5 +50,5 @@ async function handleExtensionMessage(message, sender) {
   await writeFile(file, message.content);
 
   const userOptions = await getStorage(defaultOptions);
-  await spawnEditor(file, userOptions.cmd, userOptions.args);
+  await editFile(file, userOptions.cmd, userOptions.args);
 }

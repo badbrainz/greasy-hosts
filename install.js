@@ -77,6 +77,7 @@ switch (process.platform) {
 }
 
 const scripts_dir = path.join(__dirname, 'user_scripts')
+const file_opers = 'read write watch spawn unlink'.split(' ')
 
 const ff_whitelist = {
   allowed_extensions: [
@@ -123,7 +124,7 @@ main().catch((e) => console.error('%s', e)).finally(() => rl.close())
 async function install(target, whitelist, key) {
   process.stdout.write(`writing to ${target}...`)
   await mkdir(target).catch(e => {})
-  for (const base of 'read write watch spawn'.split(' ')) {
+  for (const base of file_opers) {
     const name = HOST_NAME.replace('%NAME%', base)
     const host = path.resolve(TARGET_HOSTS, `${base}.${ isWin ? 'bat' : 'js' }`)
     const json = path.join(target, `${name}.json`)

@@ -1,9 +1,20 @@
 const fileOperations = {}
+const childProcesses = {}
 
 function operation(fileName, fn) {
   let { [fileName]: current = Promise.resolve() } = fileOperations
   current = current.finally(() => {}).then(() => new Promise(fn))
   fileOperations[fileName] = current
+  return current
+}
+
+function process(fileName, fn) {
+  let current = childProcesses[fileName]
+  if (!current) {
+    current = new Promise(fn)
+    current.finally(() => delete childProcesses[fileName])
+  }
+  childProcesses[fileName] = current
   return current
 }
 
@@ -18,9 +29,10 @@ export function readFile(fileName) {
       if (message.text == null) {
         port.disconnect()
         if (message.error) {
-          return reject(new Error(message.error))
+          reject(new Error(message.error))
+        } else {
+          resolve(chunks.join(''))
         }
-        resolve(chunks.join(''))
       } else {
         chunks.push(message.text)
       }
@@ -50,9 +62,10 @@ export function writeFile(fileName, content, chunkSize = 65536) {
     port.onMessage.addListener(function(message) {
       port.disconnect()
       if (message.error) {
-        return reject(new Error(message.error))
+        reject(new Error(message.error))
+      } else {
+        resolve()
       }
-      resolve()
     })
 
     port.onDisconnect.addListener(function() {
@@ -69,16 +82,42 @@ export function writeFile(fileName, content, chunkSize = 65536) {
   }
 }
 
-export async function spawnEditor(fileName, command, args = []) {
-  const port = chrome.runtime.connectNative('io.greasyhost.spawn')
+export function deleteFile(fileName) {
+  return operation(fileName, unlink)
 
-  await new Promise(function(resolve, reject) {
+  function unlink(resolve, reject) {
+    const port = chrome.runtime.connectNative('io.greasyhost.unlink')
+
     port.onMessage.addListener(function(message) {
       port.disconnect()
       if (message.error) {
-        return reject(new Error(message.error))
+        reject(new Error(message.error))
+      } else {
+        resolve()
       }
-      resolve()
+    })
+
+    port.onDisconnect.addListener(function() {
+      reject(chrome.runtime.lastError)
+    })
+
+    port.postMessage(fileName)
+  }
+}
+
+export function editFile(fileName, command, args = []) {
+  return process(fileName, spawn)
+
+  function spawn(resolve, reject) {
+    const port = chrome.runtime.connectNative('io.greasyhost.spawn')
+
+    port.onMessage.addListener(function(message) {
+      port.disconnect()
+      if (message.error) {
+        reject(new Error(message.error))
+      } else {
+        resolve()
+      }
     })
 
     port.onDisconnect.addListener(function() {
@@ -87,8 +126,8 @@ export async function spawnEditor(fileName, command, args = []) {
 
     port.postMessage({
       file: fileName,
-      cmd: command,
+      cmd: command.includes(' ') ? JSON.stringify(command) : command,
       args: args
     })
-  })
+  }
 }

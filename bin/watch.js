@@ -2,13 +2,13 @@
 
 const fs = require('fs')
 const path = require('path')
-const util = require('util')
+const { promisify } = require('util')
 const { pipeline, PassThrough } = require('stream')
-const { stdout, stderr } = process
 const { Output, Stringify } = require('./protocol.js')
+const { stdout, stderr } = process
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
-const stat = util.promisify(fs.stat)
+const stat = promisify(fs.stat)
 const tasks = new Set()
 
 const stream = PassThrough({ objectMode: true })

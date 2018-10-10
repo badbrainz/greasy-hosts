@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 const path = require('path')
-const util = require('util')
+const { promisify } = require('util')
 const { createWriteStream } = require('fs')
 const { pipeline, finished, Transform } = require('stream')
-const { stdin, stdout, stderr } = process
 const { Input, Output, Parse, Stringify } = require('./protocol.js')
+const { stdin, stdout, stderr } = process
 
 const scripts_dir = path.resolve(__dirname, '..', 'user_scripts')
-const finish = util.promisify(finished)
+const finish = promisify(finished)
 const file = {}
 
-const transformer = Transform({
+const transform = Transform({
   objectMode: true,
   transform(chunk, enc, cb) {
     writeToFile(chunk)
@@ -43,6 +43,6 @@ async function writeToFile(chunk) {
   }
 }
 
-pipeline(stdin, Input(), Parse(), transformer, Stringify(), Output(),
+pipeline(stdin, Input(), Parse(), transform, Stringify(), Output(),
   e => stderr.write(`${e || 'end of stream'}`))
   .pipe(stdout)
