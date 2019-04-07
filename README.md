@@ -11,3 +11,7 @@ Install
 ```sh
 node install.js
 ```
+
+Example
+-------
+[open-native-application.js](https://github.com/badbrainz/greasemonkey/blob/7f7b7ec50dc2ca18554cd26106ad7c734f1befb0/src/bg/open-native-application.js)
