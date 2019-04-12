@@ -1,33 +1,37 @@
 const fileOperations = {}
 const childProcesses = {}
 
-function operation(fileName, fn) {
+function operation(fileName, fn, end) {
   let { [fileName]: current = Promise.resolve() } = fileOperations
   current = current.finally(() => {}).then(() => new Promise(fn))
+  if (end) current.finally(end)
   fileOperations[fileName] = current
   return current
 }
 
-function process(fileName, fn) {
+function process(fileName, fn, end) {
   let current = childProcesses[fileName]
   if (!current) {
-    current = new Promise(fn)
+    current = Promise.resolve().then(() => new Promise(fn))
     current.finally(() => delete childProcesses[fileName])
   }
+  if (end) current.finally(end)
   childProcesses[fileName] = current
   return current
 }
 
 export function readFile(fileName) {
-  return operation(fileName, read)
+  let port
+
+  return operation(fileName, read, cleanup)
 
   function read(resolve, reject) {
-    const port = chrome.runtime.connectNative('io.greasyhost.read')
+    port = chrome.runtime.connectNative('io.greasyhost.read')
+
     const chunks = []
 
     port.onMessage.addListener(function(message) {
       if (message.text == null) {
-        port.disconnect()
         if (message.error) {
           reject(new Error(message.error))
         } else {
@@ -44,10 +48,18 @@ export function readFile(fileName) {
 
     port.postMessage(fileName)
   }
+
+  function cleanup() {
+    if (port) {
+      port.disconnect()
+    }
+  }
 }
 
 export function writeFile(fileName, content, chunkSize = 65536) {
-  return operation(fileName, write)
+  let port
+
+  return operation(fileName, write, cleanup)
 
   function* chop(text) {
     const blocks = Math.max(1, Math.ceil(text.length / chunkSize))
@@ -57,10 +69,9 @@ export function writeFile(fileName, content, chunkSize = 65536) {
   }
 
   function write(resolve, reject) {
-    const port = chrome.runtime.connectNative('io.greasyhost.write')
+    port = chrome.runtime.connectNative('io.greasyhost.write')
 
     port.onMessage.addListener(function(message) {
-      port.disconnect()
       if (message.error) {
         reject(new Error(message.error))
       } else {
@@ -80,16 +91,23 @@ export function writeFile(fileName, content, chunkSize = 65536) {
 
     port.postMessage({ text: null })
   }
+
+  function cleanup() {
+    if (port) {
+      port.disconnect()
+    }
+  }
 }
 
 export function deleteFile(fileName) {
-  return operation(fileName, unlink)
+  let port
+
+  return operation(fileName, unlink, cleanup)
 
   function unlink(resolve, reject) {
     const port = chrome.runtime.connectNative('io.greasyhost.unlink')
 
     port.onMessage.addListener(function(message) {
-      port.disconnect()
       if (message.error) {
         reject(new Error(message.error))
       } else {
@@ -103,16 +121,23 @@ export function deleteFile(fileName) {
 
     port.postMessage(fileName)
   }
+
+  function cleanup() {
+    if (port) {
+      port.disconnect()
+    }
+  }
 }
 
 export function editFile(fileName, command, args = []) {
-  return process(fileName, spawn)
+  let port
+
+  return process(fileName, spawn, cleanup)
 
   function spawn(resolve, reject) {
-    const port = chrome.runtime.connectNative('io.greasyhost.spawn')
+    port = chrome.runtime.connectNative('io.greasyhost.spawn')
 
     port.onMessage.addListener(function(message) {
-      port.disconnect()
       if (message.error) {
         reject(new Error(message.error))
       } else {
@@ -129,5 +154,11 @@ export function editFile(fileName, command, args = []) {
       cmd: command.includes(' ') ? JSON.stringify(command) : command,
       args: args
     })
+  }
+
+  function cleanup() {
+    if (port) {
+      port.disconnect()
+    }
   }
 }
