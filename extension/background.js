@@ -1,8 +1,4 @@
 import { readFile, writeFile, editFile } from './hosts.js';
-import promisify from './promisify.js';
-
-const sendMessage = promisify(chrome.runtime, 'sendMessage');
-const getStorage = promisify(chrome.storage.local, 'get');
 
 const GREASEMONKEY_ID = '{e4a8a97b-f2ed-450b-b12d-ee082ba24781}';
 
@@ -29,7 +25,7 @@ async function handleWatcherMessage(message) {
 
   const [uuid] = message.file.split('.');
   const content = await readFile(message.file);
-  await sendMessage(GREASEMONKEY_ID, { uuid, content });
+  await browser.runtime.sendMessage(GREASEMONKEY_ID, { uuid, content });
 }
 
 
@@ -49,6 +45,6 @@ async function handleExtensionMessage(message, sender) {
   const file = `${message.uuid}.js`;
   await writeFile(file, message.content);
 
-  const userOptions = await getStorage(defaultOptions);
+  const userOptions = await browser.storage.local.get(defaultOptions);
   await editFile(file, userOptions.cmd, userOptions.args);
 }
