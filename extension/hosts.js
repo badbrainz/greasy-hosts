@@ -105,7 +105,7 @@ export function deleteFile(fileName) {
   return operation(fileName, unlink, cleanup)
 
   function unlink(resolve, reject) {
-    const port = chrome.runtime.connectNative('io.greasyhost.unlink')
+    port = chrome.runtime.connectNative('io.greasyhost.unlink')
 
     port.onMessage.addListener(function(message) {
       if (message.error) {
